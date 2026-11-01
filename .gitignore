@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# macOS
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Recordings and test captures (never commit video)
+cnc-videos/
+*.mkv
+*.mp4
+*.wav
+
+# Local settings copied off the Pi
+*.env

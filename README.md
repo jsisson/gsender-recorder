@@ -199,3 +199,8 @@ Your recordings in `~/cnc-videos` are left in place.
 
 - Built and tested against gSender 1.6.3's socket events. gSender 1.7+ adds a plugin system and may change these events, so re-check after upgrading.
 - The recorder only listens. It never sends commands to the machine.
+- This is an independent project, not affiliated with or endorsed by Sienci Labs. It contains no gSender code; it only listens to gSender's local socket events.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
