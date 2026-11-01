@@ -38,18 +38,42 @@ Nothing in gSender needs to change. No plugin, macro, or setting is required.
 - A USB webcam that outputs MJPEG (the Logitech C920 does)
 - Internet access during install, to pull packages with `apt`
 
-## Install or update
+## Install
 
-1. Copy `gsender_recorder.py` and `install.sh` into the same folder on the Pi.
-2. **As your normal user** (the one that runs gSender), run:
+Do all of this on the Pi, **as your normal user** (the one that runs gSender), not as root.
+
+1. Install git if it isn't already there, then download this repository:
+
+   ```bash
+   sudo apt-get install -y git
+   cd ~
+   git clone https://github.com/jsisson/gsender-recorder.git
+   cd gsender-recorder
+   ```
+
+2. Run the installer:
 
    ```bash
    bash install.sh
    ```
 
-   Don't run it with `sudo` or as root. The script calls `sudo` itself where it needs to and asks for your password. It uses your username to decide who the services run as and where videos are saved.
+   Don't run it with `sudo`. The script calls `sudo` itself where it needs to and asks for your password. It uses your username to decide who the services run as and where videos are saved.
 
-3. On a first install, reboot or log out and back in. The installer adds you to the `video` and `audio` groups, and that only takes effect on a new login.
+3. Open the live preview address the installer printed, then start a job in gSender and check that a video appears in `~/cnc-videos`.
+
+No reboot is needed. The installer adds you to the `video` and `audio` groups (camera and mic access) and then restarts the services, which pick up the new groups as they start. Your own terminal doesn't: if a command you type yourself, such as `v4l2-ctl` or `arecord`, says "Permission denied", log out and back in once.
+
+The downloaded folder only holds the installer. After installing, the services run from `/opt/gsender-recorder/`, so you can keep the folder for updates or delete it.
+
+## Update
+
+```bash
+cd ~/gsender-recorder
+git pull
+bash install.sh
+```
+
+If you deleted the folder, clone it again as in step 1.
 
 The installer:
 
@@ -58,7 +82,7 @@ The installer:
 - creates the settings file `/etc/gsender-recorder.env`
 - creates and starts the `cnc-camera` and `gsender-recorder` services, which start on boot
 
-**Re-running is safe.** Your existing settings, including your focus value, are kept. If you're upgrading from the earlier version, where settings lived inside the service file, they're moved into `/etc/gsender-recorder.env` automatically. Only settings that didn't exist before are added.
+**Re-running the installer is safe.** Your existing settings, including your focus value, are kept. If you're upgrading from the earlier version, where settings lived inside the service file, they're moved into `/etc/gsender-recorder.env` automatically. Only settings that didn't exist before are added.
 
 ## Live preview
 
@@ -181,7 +205,7 @@ ffmpeg -i input.mkv -c copy output.mp4
 
 **No sound in the recording.** Check the log for an ALSA error. Make sure `AUDIO_DEVICE` matches `arecord -l`, and test with `arecord -D plughw:CARD=C920,DEV=0 -d 5 -f cd test.wav`.
 
-**"Permission denied" on `/dev/video0` or the mic.** Log out and back in, or reboot, so the `video` and `audio` group memberships take effect.
+**"Permission denied" on `/dev/video0` or the mic.** In a service log, restart the services so they pick up the `video` and `audio` groups: `sudo systemctl restart cnc-camera gsender-recorder`. For a command you typed yourself, log out and back in once so your terminal session gets the groups too.
 
 ## Uninstall
 
@@ -191,6 +215,7 @@ sudo rm /etc/systemd/system/gsender-recorder.service /etc/systemd/system/cnc-cam
 sudo rm -r /opt/gsender-recorder
 sudo rm /etc/gsender-recorder.env
 sudo systemctl daemon-reload
+rm -rf ~/gsender-recorder
 ```
 
 Your recordings in `~/cnc-videos` are left in place.
