@@ -59,7 +59,7 @@ Do all of this on the Pi, **as your normal user** (the one that runs gSender), n
 
    Don't run it with `sudo`. The script calls `sudo` itself where it needs to and asks for your password. It uses your username to decide who the services run as and where videos are saved.
 
-3. Open the live preview address the installer printed, then start a job in gSender and check that a video appears in `~/cnc-videos`.
+3. Double-click the **CNC Camera** icon on the desktop to check the live view, then start a job in gSender and check that a video appears in `~/cnc-videos`.
 
 No reboot is needed. The installer adds you to the `video` and `audio` groups (camera and mic access) and then restarts the services, which pick up the new groups as they start. Your own terminal doesn't: if a command you type yourself, such as `v4l2-ctl` or `arecord`, says "Permission denied", log out and back in once.
 
@@ -78,23 +78,38 @@ If you deleted the folder, clone it again as in step 1.
 The installer:
 
 - installs `ffmpeg`, `v4l-utils`, `ustreamer`, and the Python socket.io client
-- copies the script to `/opt/gsender-recorder/`
+- copies the script and the camera viewer page to `/opt/gsender-recorder/`
 - creates the settings file `/etc/gsender-recorder.env`
 - creates and starts the `cnc-camera` and `gsender-recorder` services, which start on boot
+- adds a **CNC Camera** launcher to the Pi menu (Sound & Video) and the desktop
 
 **Re-running the installer is safe.** Your existing settings, including your focus value, are kept. If you're upgrading from the earlier version, where settings lived inside the service file, they're moved into `/etc/gsender-recorder.env` automatically. Only settings that didn't exist before are added.
 
 ## Live preview
 
-Open this in any browser on your network, whether on the Pi, a phone or a laptop:
+### On the Pi: the CNC Camera icon
+
+Double-click **CNC Camera** on the desktop, or find it in the menu under Sound & Video. It opens the camera in its own small window, with no tabs or address bar. Resize and move it like any window; the picture always scales to fit. Double-click the picture to go full screen, and again to come back.
+
+The first time you double-click the desktop icon, the Pi may ask whether to execute the file. Choose **Execute**. To stop it asking, open the File Manager, go to Edit → Preferences, and tick "Don't ask options on launch executable file". You can also right-click **CNC Camera** in the menu and choose "Add to Desktop" or add it to the taskbar.
+
+If Chromium asks to **unlock the keyring** when it opens, the camera won't load until you answer. Enter your login password once.
+
+### From any device on your network
+
+Open this in any browser, on a phone, tablet or laptop:
 
 ```
-http://cnc.local:8080/stream
+http://cnc.local:8080/
 ```
 
-Replace `cnc` with your Pi's hostname, or use its IP address. The installer prints the exact address when it finishes. The preview works whether or not a job is running, and any number of viewers can watch at once.
+Replace `cnc` with your Pi's hostname, or use its IP address. The installer prints the exact address when it finishes.
 
-The stream is open to anyone on your local network, with no password. That's normal for a shop camera on a home network. Don't forward port 8080 on your router.
+The page fits the camera to the window in every browser, reconnects by itself if the camera service restarts, and goes full screen on double-click. It works whether or not a job is running, and any number of people can watch at once.
+
+The bare stream is also available at `http://cnc.local:8080/stream`, for other apps that accept an MJPEG URL. When opened directly in a browser, some browsers, including Chromium on the Pi, show it at full size with scrollbars instead of fitting it to the window. Use the page above for viewing.
+
+The camera is open to anyone on your local network, with no password. That's normal for a shop camera on a home network. Don't forward port 8080 on your router.
 
 ## Check your camera's modes
 
@@ -193,7 +208,7 @@ ffmpeg -i input.mkv -c copy output.mp4
 
 ## Troubleshooting
 
-**Preview page doesn't load.** Check the camera service with `journalctl -u cnc-camera -f`. "Device or resource busy" means another program has the camera open. Close ffplay, VLC or guvcview; ustreamer must be the only program using it. An error about the resolution or format means `VIDEO_SIZE`/`VIDEO_FPS` don't match a mode the camera offers in MJPEG.
+**Preview page doesn't load.** On the Pi, check for a hidden "Unlock keyring" window first. Check the camera service with `journalctl -u cnc-camera -f`. "Device or resource busy" means another program has the camera open. Close ffplay, VLC or guvcview; ustreamer must be the only program using it. An error about the resolution or format means `VIDEO_SIZE`/`VIDEO_FPS` don't match a mode the camera offers in MJPEG.
 
 **Focus or exposure settings don't stick.** Look for "Could not set ..." in either service's log. The control name is probably misspelled; compare with `v4l2-ctl --list-ctrls`.
 
@@ -214,6 +229,7 @@ sudo systemctl disable --now gsender-recorder cnc-camera
 sudo rm /etc/systemd/system/gsender-recorder.service /etc/systemd/system/cnc-camera.service
 sudo rm -r /opt/gsender-recorder
 sudo rm /etc/gsender-recorder.env
+rm -f ~/.local/share/applications/cnc-camera.desktop ~/Desktop/cnc-camera.desktop
 sudo systemctl daemon-reload
 rm -rf ~/gsender-recorder
 ```

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CNC Camera</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #000;
+    overflow: hidden;
+  }
+  /* Always fit the whole picture inside the window, keeping its shape. */
+  img {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    object-fit: contain;
+  }
+  #status {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: #bbb;
+    font: 16px system-ui, sans-serif;
+  }
+</style>
+</head>
+<body>
+<img id="cam" alt="CNC camera">
+<div id="status">Camera offline, retrying…</div>
+<script>
+  // Same host and port that served this page, so it works as
+  // cnc.local, 127.0.0.1 or an IP address without changes.
+  const cam = document.getElementById('cam');
+  const status = document.getElementById('status');
+
+  function connect() {
+    cam.src = '/stream?t=' + Date.now();
+  }
+  cam.addEventListener('load', () => { status.style.display = 'none'; });
+  cam.addEventListener('error', () => {
+    status.style.display = 'flex';
+    setTimeout(connect, 2000);   // reconnect if the camera service restarts
+  });
+
+  // Double-click toggles full screen.
+  document.addEventListener('dblclick', () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(() => {});
+  });
+
+  connect();
+</script>
+</body>
+</html>

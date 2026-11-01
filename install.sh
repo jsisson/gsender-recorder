@@ -25,6 +25,8 @@ sudo apt-get install -y ffmpeg v4l-utils ustreamer \
 echo "Installing script to /opt/gsender-recorder..."
 sudo mkdir -p /opt/gsender-recorder
 sudo install -m 755 gsender_recorder.py /opt/gsender-recorder/gsender_recorder.py
+sudo install -D -m 644 www/index.html /opt/gsender-recorder/www/index.html
+sudo install -D -m 644 www/icon.svg /opt/gsender-recorder/www/icon.svg
 sudo usermod -aG video,audio "$RUN_USER"
 
 # ---------------------------------------------------------------- settings
@@ -75,7 +77,7 @@ After=network.target
 User=$RUN_USER
 EnvironmentFile=$ENV_FILE
 # --encoder=HW passes the camera's own MJPEG frames through: no re-encoding.
-ExecStart=/usr/bin/ustreamer --device=\${VIDEO_DEVICE} --format=MJPEG --encoder=HW --resolution=\${VIDEO_SIZE} --desired-fps=\${VIDEO_FPS} --host=0.0.0.0 --port=\${STREAM_PORT} --persistent
+ExecStart=/usr/bin/ustreamer --device=\${VIDEO_DEVICE} --format=MJPEG --encoder=HW --resolution=\${VIDEO_SIZE} --desired-fps=\${VIDEO_FPS} --host=0.0.0.0 --port=\${STREAM_PORT} --persistent --static=/opt/gsender-recorder/www
 # Lock focus/exposure once the camera is open.
 ExecStartPost=/bin/sh -c 'sleep 3; /usr/bin/python3 /opt/gsender-recorder/gsender_recorder.py --apply-controls'
 Restart=always
@@ -104,14 +106,43 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
+# ---------------------------------------------------------------- desktop launcher
+echo "Adding CNC Camera to the menu and desktop..."
+PORT="$(grep '^STREAM_PORT=' "$ENV_FILE" | cut -d= -f2)"
+VIEW_URL="http://127.0.0.1:${PORT:-8080}/"
+if command -v chromium-browser >/dev/null; then
+  OPEN_CMD="chromium-browser --app=$VIEW_URL --window-size=640,400"
+elif command -v chromium >/dev/null; then
+  OPEN_CMD="chromium --app=$VIEW_URL --window-size=640,400"
+elif command -v firefox >/dev/null; then
+  OPEN_CMD="firefox --new-window $VIEW_URL"
+else
+  OPEN_CMD="xdg-open $VIEW_URL"
+fi
+LAUNCHER="$RUN_HOME/.local/share/applications/cnc-camera.desktop"
+mkdir -p "$(dirname "$LAUNCHER")"
+cat > "$LAUNCHER" <<EOF
+[Desktop Entry]
+Name=CNC Camera
+Comment=Live view of the CNC webcam
+Exec=$OPEN_CMD
+Icon=/opt/gsender-recorder/www/icon.svg
+Terminal=false
+Type=Application
+Categories=AudioVideo;
+EOF
+chmod +x "$LAUNCHER"
+if [ -d "$RUN_HOME/Desktop" ]; then
+  install -m 755 "$LAUNCHER" "$RUN_HOME/Desktop/cnc-camera.desktop"
+fi
+
 sudo systemctl daemon-reload
 sudo systemctl enable cnc-camera gsender-recorder
 sudo systemctl restart cnc-camera gsender-recorder
 
-PORT="$(grep '^STREAM_PORT=' "$ENV_FILE" | cut -d= -f2)"
 echo
 echo "Done."
-echo "  Live preview:  http://$(hostname).local:${PORT:-8080}/stream"
+echo "  Live preview:  http://$(hostname).local:${PORT:-8080}/   (or the CNC Camera icon)"
 echo "  Settings:      sudo nano $ENV_FILE"
 echo "  Recorder log:  journalctl -u gsender-recorder -f"
 echo "  Videos:        $(grep '^OUTPUT_DIR=' "$ENV_FILE" | cut -d= -f2)"
